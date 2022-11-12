@@ -1,28 +1,72 @@
-#include <SDL2\SDL.h>
+#include <SDL.h>
+#include <SDL_ttf.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
+#include <time.h>
 
 const int SCREEN_WIDTH = 1280;
 const int SCREEN_HEIGHT = 960;
 
 #define APP_NAME "gamr"
+#define FONT_PATH "assets/fonts/DejaVuSansMono.ttf"
 
 typedef struct {
     SDL_Renderer* renderer;
-    SDL_Window* window;
-    SDL_Rect player;
-    int up;
-    int down;
-    int left;
-    int right;
-    bool quit;
+    SDL_Window*   window;
+    SDL_Rect      player;
+    TTF_Font*     font;
+    int           up;
+    int           down;
+    int           left;
+    int           right;
+    bool          quit;
+    struct {
+        int    frames;
+        int    frames_last_sec;
+        int    fps;
+        time_t timer;
+    } frame_stats;
 } app_t;
+
+bool
+app_render_debug_stats(app_t* app)
+{
+    time_t now   = time(0);
+    double delta = difftime(now, app->frame_stats.timer);
+
+    if (delta > 1) {
+        app->frame_stats.fps             = app->frame_stats.frames_last_sec / delta + 0.5;
+        app->frame_stats.frames_last_sec = 0;
+        app->frame_stats.timer           = now;
+    }
+
+    char text[64];
+    sprintf(text, "fps: %d (%d)", app->frame_stats.fps, app->frame_stats.frames);
+
+    static const SDL_Color text_color = {255, 255, 255, 128};
+
+    SDL_Surface* surface = TTF_RenderText_Solid(app->font, text, text_color);
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(app->renderer, surface);
+
+    SDL_Rect location = {0, 0, surface->w, surface->h};
+    SDL_FreeSurface(surface);
+
+    SDL_RenderCopy(app->renderer, texture, NULL, &location);
+}
+
+static void
+app_inc_frame_count(app_t* app)
+{
+    app->frame_stats.frames++;
+    app->frame_stats.frames_last_sec++;
+}
 
 bool 
 app_init(app_t* app) 
 {
     const int renderer_flags = SDL_RENDERER_ACCELERATED;
-    const int window_flags = 0;
+    const int window_flags   = 0;
 
     memset(app, 0, sizeof(*app));
 
@@ -54,6 +98,13 @@ app_init(app_t* app)
     app->player.h = 100;
 
     // TODO    IMG_Init(IMG_INIT_PNG);
+    TTF_Init();
+
+    app->font = TTF_OpenFont(FONT_PATH, 24);
+    if (!app->font) {
+        printf("failed to open font: %s\n", SDL_GetError());
+        goto fail;
+    }
 
 fail:
     // TODO destroy things
@@ -172,7 +223,9 @@ app_run(app_t* app)
     for (;;) {
         app_prepare_scene(app);
         app_process_input(app);
+        app_render_debug_stats(app);
         app_present_scene(app);
+        app_inc_frame_count(app);
 
         if (app->quit) {
             return;
