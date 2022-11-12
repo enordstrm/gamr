@@ -4,7 +4,7 @@ CC = gcc
 
 COMPILER_FLAGS = -w
 
-LINKER_FLAGS = 
+LINKER_FLAGS =
 
 OBJ_NAME = gamr
 
