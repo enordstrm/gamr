@@ -29,7 +29,7 @@ typedef struct {
     } frame_stats;
 } app_t;
 
-bool
+void
 app_render_debug_stats(app_t* app)
 {
     time_t now   = time(0);
@@ -63,7 +63,7 @@ app_inc_frame_count(app_t* app)
 }
 
 bool 
-app_init(app_t* app) 
+app_init(app_t* app)
 {
     const int renderer_flags = SDL_RENDERER_ACCELERATED;
     const int window_flags   = 0;
@@ -81,7 +81,7 @@ app_init(app_t* app)
     if (app->window == NULL) {
         printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError());
         goto fail;
-    } 
+    }
 
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
@@ -122,8 +122,8 @@ app_fini(app_t* app)
     SDL_Quit();
 }
 
-static void 
-app_prepare_scene(app_t* app) 
+static void
+app_prepare_scene(app_t* app)
 {
     SDL_SetRenderDrawColor(app->renderer, 96, 128, 255, 255);
     SDL_RenderClear(app->renderer);
@@ -141,7 +141,7 @@ static void
 app_process_input(app_t* app)
 {
     SDL_Event e;
-    while (SDL_PollEvent(&e)) { 
+    while (SDL_PollEvent(&e)) {
         switch (e.type) {
             case SDL_QUIT:
                 app->quit = true;
@@ -152,27 +152,29 @@ app_process_input(app_t* app)
                     break;
                 }
                 switch (e.key.keysym.scancode) {
-                    case SDL_SCANCODE_W: 
+                    case SDL_SCANCODE_W:
                         app->up = e.type == SDL_KEYDOWN;
                         break;
-                    case SDL_SCANCODE_A: 
+                    case SDL_SCANCODE_A:
                         app->left = e.type == SDL_KEYDOWN;;
                         break;
-                    case SDL_SCANCODE_S: 
+                    case SDL_SCANCODE_S:
                         app->down = e.type == SDL_KEYDOWN;
                         break;
-                    case SDL_SCANCODE_D: 
+                    case SDL_SCANCODE_D:
                         app->right = e.type == SDL_KEYDOWN;
                         break;
                     case SDL_SCANCODE_Q:
                         app->quit = true;
                         break;
+					default:
+						break;
                 }
 
             default:
                 break;
         }
-    } 
+    }
 
     if (app->up) {
         app->player.y -= app->up;
@@ -217,8 +219,8 @@ app_process_input(app_t* app)
     }
 }
 
-void 
-app_run(app_t* app) 
+void
+app_run(app_t* app)
 {
     for (;;) {
         app_prepare_scene(app);
@@ -235,7 +237,7 @@ app_run(app_t* app)
     }
 }
 
-int 
+int
 main(int argc, char* args[])
 {
     app_t app;
