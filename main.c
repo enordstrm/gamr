@@ -11,6 +11,29 @@ const int SCREEN_HEIGHT = 960;
 #define APP_NAME "gamr"
 #define FONT_PATH "assets/fonts/DejaVuSansMono.ttf"
 
+#define PARTICLE_AMOUNT_MAX 20
+#define PARTICLE_WIDTH_MAX 25
+#define PARTICLE_HEIGHT_MAX 25
+#define PARTICLE_SPEED_MAX 15
+
+#define PARTICLE_RGB_R 255
+#define PARTICLE_RGB_B 155
+#define PARTICLE_RGB_G 25
+#define PARTICLE_RGB_A 255
+
+typedef struct {
+	int x, y;
+} direction_t;
+
+
+typedef struct {
+	float lifetime;
+	int speed;
+	int x, y;
+	int w, h;
+	direction_t direction;
+} particle_t;
+
 typedef struct {
     SDL_Renderer* renderer;
     SDL_Window*   window;
@@ -21,6 +44,8 @@ typedef struct {
     int           left;
     int           right;
     bool          quit;
+	int			  current_particle_amount;
+	particle_t    particles[PARTICLE_AMOUNT_MAX];
     struct {
         int    frames;
         int    frames_last_sec;
@@ -41,8 +66,8 @@ app_render_debug_stats(app_t* app)
         app->frame_stats.timer           = now;
     }
 
-    char text[64];
-    sprintf(text, "fps: %d (%d)", app->frame_stats.fps, app->frame_stats.frames);
+    char text[128];
+    sprintf(text, "fps: %d (%d); projectiles: #%d;", app->frame_stats.fps, app->frame_stats.frames, app->current_particle_amount);
 
     static const SDL_Color text_color = {255, 255, 255, 128};
 
@@ -53,6 +78,7 @@ app_render_debug_stats(app_t* app)
     SDL_FreeSurface(surface);
 
     SDL_RenderCopy(app->renderer, texture, NULL, &location);
+
 }
 
 static void
@@ -62,7 +88,98 @@ app_inc_frame_count(app_t* app)
     app->frame_stats.frames_last_sec++;
 }
 
-bool 
+particle_t
+spawn_particle(app_t *app, int x, int y, int w, int h)
+{
+	particle_t particle;
+
+	if (app->current_particle_amount == 20)
+	{
+		return particle;
+	}
+
+	particle.x = x;
+	particle.y = y;
+	particle.w = w;
+	particle.h = h;
+
+	particle.lifetime = 0;
+	particle.speed = PARTICLE_SPEED_MAX;
+	particle.direction.y = 0;
+	particle.direction.x = app->current_particle_amount % 2 == 0 ? 1 : -1;
+
+	app->particles[app->current_particle_amount] = particle;
+	app->current_particle_amount += 1;
+
+	if (app->current_particle_amount >= 21)
+	{
+		app->current_particle_amount = 20;
+	}
+
+	return particle;
+}
+void
+render_particle(app_t *app, particle_t particle)
+{
+    SDL_SetRenderDrawColor(app->renderer, PARTICLE_RGB_R, PARTICLE_RGB_G, PARTICLE_RGB_B, PARTICLE_RGB_A);
+	SDL_Rect rect;
+	rect.x = particle.x;
+	rect.y = particle.y;
+	rect.w = particle.w;
+	rect.h = particle.h;
+    SDL_RenderFillRect(app->renderer, &rect);
+}
+
+void
+remove_particle(app_t *app, int i)
+{
+	particle_t particle = app->particles[i];
+	if ((particle.x - particle.w > SCREEN_WIDTH | particle.x < 0 ) | (particle.y > SCREEN_HEIGHT | particle.y + particle. h < 0 ))
+	{
+		for (int j = 0; j < app->current_particle_amount - i - 1; j++)
+		{
+			app->particles[i+j] = app->particles[i + j+1];
+		}
+		app->current_particle_amount --;
+	}
+	return;
+}
+
+void
+process_particle(particle_t *particle)
+{
+	particle->x += particle->direction.x * particle->speed;
+	particle->y += particle->direction.y * particle->speed;
+}
+
+void
+app_render_particles(app_t *app)
+{
+	if (app->current_particle_amount == 0)
+	{
+		return;
+	}
+	for (int i = 0; i < (app->current_particle_amount-1); i++)
+	{
+		render_particle(app, app->particles[i]);
+	}
+}
+
+void
+app_process_particles(app_t *app)
+{
+	if (app->current_particle_amount == 0)
+	{
+		return;
+	}
+	for (int i = 0; i < (app->current_particle_amount-1); i++)
+	{
+		process_particle(&app->particles[i]);
+		remove_particle(app, i);
+	}
+}
+
+bool
 app_init(app_t* app)
 {
     const int renderer_flags = SDL_RENDERER_ACCELERATED;
@@ -210,6 +327,12 @@ app_process_input(app_t* app)
     }
     if (app->player.y >= SCREEN_HEIGHT - app->player.h) {
         app->player.y = SCREEN_HEIGHT - app->player.h;
+		spawn_particle(app,
+				(int)app->player.x + app->player.w/2,
+				app->player.y + app->player.h - PARTICLE_HEIGHT_MAX,
+				PARTICLE_WIDTH_MAX,
+				PARTICLE_HEIGHT_MAX
+				);
     }
     if (app->player.x <= 0) {
         app->player.x = 0;
@@ -218,14 +341,16 @@ app_process_input(app_t* app)
         app->player.x = SCREEN_WIDTH - app->player.w;
     }
 }
-
 void
+
 app_run(app_t* app)
 {
     for (;;) {
         app_prepare_scene(app);
         app_process_input(app);
         app_render_debug_stats(app);
+		app_render_particles(app);
+		app_process_particles(app);
         app_present_scene(app);
         app_inc_frame_count(app);
 
@@ -236,6 +361,7 @@ app_run(app_t* app)
         SDL_Delay(16);
     }
 }
+
 
 int
 main(int argc, char* args[])
