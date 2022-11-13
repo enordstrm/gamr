@@ -11,7 +11,7 @@ const int SCREEN_HEIGHT = 960;
 #define APP_NAME "gamr"
 #define FONT_PATH "assets/fonts/DejaVuSansMono.ttf"
 
-#define PARTICLE_AMOUNT_MAX 20
+#define PARTICLE_AMOUNT_MAX 40
 #define PARTICLE_WIDTH_MAX 25
 #define PARTICLE_HEIGHT_MAX 25
 #define PARTICLE_SPEED_MAX 15
@@ -93,7 +93,7 @@ spawn_particle(app_t *app, int x, int y, int w, int h)
 {
 	particle_t particle;
 
-	if (app->current_particle_amount == 20)
+	if (app->current_particle_amount == PARTICLE_AMOUNT_MAX)
 	{
 		return particle;
 	}
@@ -111,9 +111,9 @@ spawn_particle(app_t *app, int x, int y, int w, int h)
 	app->particles[app->current_particle_amount] = particle;
 	app->current_particle_amount += 1;
 
-	if (app->current_particle_amount >= 21)
+	if (app->current_particle_amount >= PARTICLE_AMOUNT_MAX+1)
 	{
-		app->current_particle_amount = 20;
+		app->current_particle_amount = PARTICLE_AMOUNT_MAX;
 	}
 
 	return particle;
